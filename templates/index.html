@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bill Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a23;
+    --surface2: #1e2430;
+    --border: #2a3142;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --danger: #ff4757;
+    --success: #2ed573;
+    --warn: #ffa502;
+    --text: #e8ecf4;
+    --muted: #6b7591;
+    --card-r: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+  
+  /* Layout */
+  .shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 0;
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .logo {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .logo p { font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+  .nav-btn {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px; border: none;
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    text-align: left; transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--accent); color: #000; font-weight: 500; }
+  .nav-btn .icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .nav-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; padding: 4px 12px; }
+
+  /* Stats strip in sidebar */
+  .stat-strip { padding: 16px; border-top: 1px solid var(--border); }
+  .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .stat-item:last-child { border: none; }
+  .stat-label { font-size: 11px; color: var(--muted); }
+  .stat-value { font-size: 13px; font-weight: 500; }
+  .stat-value.danger { color: var(--danger); }
+  .stat-value.warn { color: var(--warn); }
+  .stat-value.success { color: var(--success); }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    padding: 20px 32px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px; background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; flex: 1; }
+  .search-wrap { position: relative; }
+  .search-wrap input {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px 8px 36px;
+    border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 13px;
+    width: 220px; outline: none; transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap .s-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #d4eb00; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: 0.85; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* Content */
+  .content { padding: 28px 32px; flex: 1; }
+
+  /* Filters */
+  .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-family: 'DM Mono', monospace;
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--text); color: var(--text); }
+  .filter-btn.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+
+  /* Bills table */
+  .bills-table-wrap { overflow-x: auto; border-radius: var(--card-r); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th { padding: 12px 16px; text-align: left; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 500; white-space: nowrap; }
+  td { padding: 13px 16px; border-top: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  tr { transition: background 0.1s; }
+  tr:hover td { background: var(--surface2); }
+  
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.5px;
+  }
+  .badge-y { background: rgba(46,213,115,0.15); color: var(--success); }
+  .badge-n { background: rgba(255,71,87,0.15); color: var(--danger); }
+  .badge-col { background: rgba(255,165,2,0.15); color: var(--warn); }
+  .badge-cat { background: rgba(232,255,71,0.1); color: var(--accent); border: 1px solid rgba(232,255,71,0.2); }
+
+  .overdue-row td { border-left: 3px solid var(--danger); }
+  .amount { font-weight: 500; }
+
+  .actions { display: flex; gap: 6px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 80px 20px; }
+  .empty .e-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty p { color: var(--muted); font-size: 14px; }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; width: 100%; max-width: 620px; max-height: 92vh;
+    overflow-y: auto; transform: translateY(20px); transition: transform 0.2s;
+    padding: 32px;
+  }
+  .overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .modal-header h3 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; }
+  .close-btn { background: var(--surface2); border: none; color: var(--muted); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; transition: color 0.15s; }
+  .close-btn:hover { color: var(--text); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .field input, .field select, .field textarea {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 9px 12px; border-radius: 8px;
+    font-family: 'DM Mono', monospace; font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field select option { background: var(--surface); }
+  .radio-row { display: flex; gap: 12px; }
+  .radio-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; text-transform: none; letter-spacing: 0; }
+  .radio-row input[type=radio] { accent-color: var(--accent); }
+
+  /* PDF upload zone */
+  .pdf-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .pdf-zone:hover { border-color: var(--accent); }
+  .pdf-zone.has-file { border-color: var(--success); background: rgba(46,213,115,0.05); }
+  .pdf-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .pdf-zone p { font-size: 12px; color: var(--muted); }
+  .pdf-zone .pdf-name { color: var(--success); font-size: 13px; margin-top: 4px; }
+
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+  /* Detail panel */
+  .detail-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: stretch; justify-content: flex-end;
+    z-index: 100;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .detail-overlay.open { opacity: 1; pointer-events: all; }
+  .detail-panel {
+    background: var(--surface); border-left: 1px solid var(--border);
+    width: 520px; max-width: 100%; overflow-y: auto; padding: 32px;
+    transform: translateX(40px); transition: transform 0.25s;
+  }
+  .detail-overlay.open .detail-panel { transform: translateX(0); }
+
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+  .detail-provider { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; }
+  .detail-amount { font-size: 32px; font-weight: 700; color: var(--accent); margin: 4px 0 16px; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .detail-field { background: var(--surface2); border-radius: 8px; padding: 12px; }
+  .detail-field .dl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .detail-field .dv { font-size: 14px; }
+
+  .section-title { font-size: 12px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+  /* Links section */
+  .link-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: background 0.15s; }
+  .link-item:hover { background: var(--border); }
+  .link-info { flex: 1; }
+  .link-info .lp { font-size: 13px; font-weight: 500; }
+  .link-info .lm { font-size: 11px; color: var(--muted); }
+  .link-del { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; }
+  .link-del:hover { color: var(--danger); }
+
+  .add-link-wrap { display: flex; gap: 8px; margin-top: 10px; }
+  .add-link-wrap select { flex: 1; }
+
+  /* PDF viewer */
+  .pdf-viewer { width: 100%; height: 400px; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 12px 18px; border-radius: 10px; font-size: 13px;
+    z-index: 999; transform: translateY(10px); opacity: 0;
+    transition: all 0.2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok { border-left: 3px solid var(--success); }
+  .toast.err { border-left: 3px solid var(--danger); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .detail-panel { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <h1>Bill<span>Vault</span></h1>
+      <p>PDF Bill Tracker</p>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" onclick="setView('all')"><span class="icon">📋</span> All Bills</button>
+      <button class="nav-btn" onclick="setView('unpaid')"><span class="icon">⏳</span> Unpaid</button>
+      <button class="nav-btn" onclick="setView('overdue')"><span class="icon">🔴</span> Overdue</button>
+      <button class="nav-btn" onclick="setView('paid')"><span class="icon">✅</span> Paid</button>
+      <button class="nav-btn" onclick="setView('collections')"><span class="icon">⚠️</span> Collections</button>
+      <div class="nav-divider"></div>
+      <div class="nav-label">Categories</div>
+      <div id="cat-nav"></div>
+    </nav>
+    <div class="stat-strip" id="stat-strip"></div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="view-title">All Bills</h2>
+      <div class="search-wrap">
+        <span class="s-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search provider, acct…" oninput="debounceLoad()"/>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">＋ Add Bill</button>
+    </div>
+    <div class="content">
+      <div class="filters" id="filter-row"></div>
+      <div id="bills-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="form-overlay" onclick="overlayClose(event, 'form-overlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Add Bill</h3>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <form id="bill-form" enctype="multipart/form-data" onsubmit="submitBill(event)">
+      <input type="hidden" id="edit-id"/>
+      <div class="form-grid">
+        <div class="field full">
+          <label>Provider *</label>
+          <input type="text" name="provider" required placeholder="e.g. AT&T, City Water Dept"/>
+        </div>
+        <div class="field">
+          <label>Account #</label>
+          <input type="text" name="account_number" placeholder="Account number"/>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input type="text" name="category" placeholder="Utilities, Medical, Rent…" list="cat-list"/>
+          <datalist id="cat-list"></datalist>
+        </div>
+        <div class="field">
+          <label>Statement Date</label>
+          <input type="date" name="statement_date"/>
+        </div>
+        <div class="field">
+          <label>Amount Due ($)</label>
+          <input type="number" step="0.01" name="amount_due" placeholder="0.00"/>
+        </div>
+        <div class="field">
+          <label>Due Date</label>
+          <input type="date" name="due_date"/>
+        </div>
+        <div class="field">
+          <label>Paid</label>
+          <div class="radio-row">
+            <label><input type="radio" name="paid" value="N" checked/> No</label>
+            <label><input type="radio" name="paid" value="Y"/> Yes</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>In Collections</label>
+          <div class="radio-row">
+            <label><input type="radio" name="in_collections" value="N" checked/> No</label>
+            <label><input type="radio" name="in_collections" value="Y"/> Yes</label>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Notes</label>
+          <textarea name="notes" placeholder="Any additional notes…"></textarea>
+        </div>
+        <div class="field full">
+          <label>PDF Statement</label>
+          <div class="pdf-zone" id="pdf-zone">
+            <input type="file" name="pdf" accept=".pdf" onchange="onPdfChange(this)"/>
+            <div>📄 <span id="pdf-zone-text">Drop PDF or click to upload</span></div>
+            <div class="pdf-name" id="pdf-name-display"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Bill</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detail-overlay" onclick="overlayClose(event, 'detail-overlay')">
+  <div class="detail-panel" id="detail-panel"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentView = 'all';
+let currentBills = [];
+let searchTimer;
+let allBillsForLink = [];
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── View ──────────────────────────────────────────────────────────────────────
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('search-input').value = '';
+  loadBills();
+  const titles = { all: 'All Bills', unpaid: 'Unpaid Bills', overdue: 'Overdue Bills', paid: 'Paid Bills', collections: 'In Collections' };
+  document.getElementById('view-title').textContent = titles[v] || '📂 ' + v;
+}
+
+function debounceLoad() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadBills, 300);
+}
+
+async function loadBills() {
+  const search = document.getElementById('search-input').value;
+  let url = '/api/bills?';
+  if (search) url += `search=${encodeURIComponent(search)}&`;
+  if (currentView === 'unpaid') url += 'paid=N&';
+  if (currentView === 'paid') url += 'paid=Y&';
+  if (currentView === 'collections') url += 'collections=Y&';
+  if (currentView !== 'all' && currentView !== 'unpaid' && currentView !== 'paid' && currentView !== 'overdue' && currentView !== 'collections') {
+    url += `category=${encodeURIComponent(currentView)}&`;
+  }
+
+  const bills = await api(url);
+  const today = new Date().toISOString().split('T')[0];
+  currentBills = currentView === 'overdue'
+    ? bills.filter(b => b.paid === 'N' && b.due_date && b.due_date < today)
+    : bills;
+  renderTable(currentBills);
+  loadStats();
+}
+
+function renderTable(bills) {
+  const container = document.getElementById('bills-container');
+  if (!bills.length) {
+    container.innerHTML = `<div class="empty"><div class="e-icon">🗂️</div><p>No bills found</p></div>`;
+    return;
+  }
+  const today = new Date().toISOString().split('T')[0];
+  const rows = bills.map(b => {
+    const isOverdue = b.paid === 'N' && b.due_date && b.due_date < today;
+    const amt = b.amount_due != null ? '$' + b.amount_due.toFixed(2) : '—';
+    return `<tr class="${isOverdue ? 'overdue-row' : ''}" onclick="openDetail(${b.id})" style="cursor:pointer">
+      <td><strong>${esc(b.provider)}</strong><br><span style="color:var(--muted);font-size:11px">${esc(b.account_number||'')}</span></td>
+      <td>${b.category ? `<span class="badge badge-cat">${esc(b.category)}</span>` : '—'}</td>
+      <td class="amount">${amt}</td>
+      <td>${b.due_date || '—'}${isOverdue ? ' <span style="color:var(--danger);font-size:10px">OVERDUE</span>' : ''}</td>
+      <td>${b.statement_date || '—'}</td>
+      <td><span class="badge badge-${b.paid}">${b.paid}</span></td>
+      <td>${b.in_collections === 'Y' ? '<span class="badge badge-col">YES</span>' : '<span class="badge badge-n">No</span>'}</td>
+      <td>${b.pdf_filename ? `<span title="${esc(b.pdf_filename)}" style="color:var(--accent)">📄</span>` : ''}</td>
+      <td onclick="event.stopPropagation()">
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit(${b.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteBill(${b.id})">Del</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = `
+    <div class="bills-table-wrap">
+      <table>
+        <thead><tr>
+          <th>Provider / Acct</th><th>Category</th><th>Amount</th><th>Due Date</th>
+          <th>Statement Date</th><th>Paid</th><th>Collections</th><th>PDF</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function loadStats() {
+  try {
+    const s = await api('/api/stats');
+    document.getElementById('stat-strip').innerHTML = `
+      <div class="stat-item"><span class="stat-label">Total Bills</span><span class="stat-value">${s.total}</span></div>
+      <div class="stat-item"><span class="stat-label">Unpaid</span><span class="stat-value warn">${s.unpaid}</span></div>
+      <div class="stat-item"><span class="stat-label">Overdue</span><span class="stat-value danger">${s.overdue}</span></div>
+      <div class="stat-item"><span class="stat-label">Collections</span><span class="stat-value danger">${s.in_collections}</span></div>
+      <div class="stat-item"><span class="stat-label">Total Owed</span><span class="stat-value danger">$${(s.total_owed||0).toFixed(2)}</span></div>
+    `;
+    const catNav = document.getElementById('cat-nav');
+    catNav.innerHTML = (s.categories || []).map(c =>
+      `<button class="nav-btn" onclick="setView(${JSON.stringify(c.category)})"><span class="icon">🏷</span> ${esc(c.category)} <span style="margin-left:auto;font-size:11px;color:var(--muted)">${c.cnt}</span></button>`
+    ).join('');
+    // Update category datalist
+    const dl = document.getElementById('cat-list');
+    dl.innerHTML = (s.categories || []).map(c => `<option value="${esc(c.category)}"/>`).join('');
+  } catch(e) {}
+}
+
+// ── Form Modal ────────────────────────────────────────────────────────────────
+
+function openModal() {
+  document.getElementById('modal-title').textContent = 'Add Bill';
+  document.getElementById('bill-form').reset();
+  document.getElementById('edit-id').value = '';
+  document.getElementById('pdf-name-display').textContent = '';
+  document.getElementById('pdf-zone').classList.remove('has-file');
+  document.getElementById('form-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('form-overlay').classList.remove('open');
+}
+
+function overlayClose(e, id) {
+  if (e.target.id === id) document.getElementById(id).classList.remove('open');
+}
+
+async function openEdit(id) {
+  const b = await api(`/api/bills/${id}`);
+  document.getElementById('modal-title').textContent = 'Edit Bill';
+  document.getElementById('edit-id').value = id;
+  const form = document.getElementById('bill-form');
+  form.reset();
+  form.provider.value = b.provider || '';
+  form.account_number.value = b.account_number || '';
+  form.category.value = b.category || '';
+  form.statement_date.value = b.statement_date || '';
+  form.amount_due.value = b.amount_due != null ? b.amount_due : '';
+  form.due_date.value = b.due_date || '';
+  form.querySelector(`[name=paid][value=${b.paid}]`).checked = true;
+  form.querySelector(`[name=in_collections][value=${b.in_collections}]`).checked = true;
+  form.notes.value = b.notes || '';
+  document.getElementById('pdf-name-display').textContent = b.pdf_filename ? '📎 ' + b.pdf_filename : '';
+  document.getElementById('pdf-zone').classList.toggle('has-file', !!b.pdf_filename);
+  document.getElementById('form-overlay').classList.add('open');
+}
+
+function onPdfChange(input) {
+  if (input.files[0]) {
+    document.getElementById('pdf-name-display').textContent = '📎 ' + input.files[0].name;
+    document.getElementById('pdf-zone').classList.add('has-file');
+  }
+}
+
+async function submitBill(e) {
+  e.preventDefault();
+  const form = e.target;
+  const id = document.getElementById('edit-id').value;
+  const fd = new FormData(form);
+  try {
+    if (id) {
+      await fetch(`/api/bills/${id}`, { method: 'PUT', body: fd });
+      toast('Bill updated ✓');
+    } else {
+      await fetch('/api/bills', { method: 'POST', body: fd });
+      toast('Bill added ✓');
+    }
+    closeModal();
+    loadBills();
+  } catch(err) {
+    toast('Error: ' + err.message, 'err');
+  }
+}
+
+async function deleteBill(id) {
+  if (!confirm('Delete this bill?')) return;
+  await api(`/api/bills/${id}`, { method: 'DELETE' });
+  toast('Deleted');
+  loadBills();
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+
+async function openDetail(id) {
+  const b = await api(`/api/bills/${id}`);
+  allBillsForLink = currentBills.filter(x => x.id !== id);
+  const today = new Date().toISOString().split('T')[0];
+  const isOverdue = b.paid === 'N' && b.due_date && b.due_date < today;
+
+  const linksHtml = b.links.length
+    ? b.links.map(l => `
+        <div class="link-item" onclick="openDetail(${l.linked_bill_id})">
+          <div class="link-info">
+            <div class="lp">${esc(l.provider)}</div>
+            <div class="lm">${l.link_type} · ${l.due_date || '—'} · ${l.amount_due != null ? '$'+l.amount_due.toFixed(2) : '—'} · ${l.paid==='Y'?'Paid':'Unpaid'}${l.note?' · '+esc(l.note):''}</div>
+          </div>
+          <button class="link-del" onclick="event.stopPropagation(); removeLink(${l.link_id})" title="Remove link">✕</button>
+        </div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">No linked records</p>';
+
+  const linkOptions = allBillsForLink.map(x =>
+    `<option value="${x.id}">${esc(x.provider)} — ${x.due_date||'?'} — ${x.amount_due!=null?'$'+x.amount_due.toFixed(2):'?'}</option>`
+  ).join('');
+
+  const pdfSection = b.pdf_filename ? `
+    <p class="section-title" style="margin-top:24px">PDF Statement</p>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <a href="/api/bills/${id}/pdf" target="_blank" class="btn btn-ghost btn-sm">Open PDF ↗</a>
+    </div>
+    <iframe class="pdf-viewer" src="/api/bills/${id}/pdf"></iframe>
+  ` : '';
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-provider">${esc(b.provider)}</div>
+        <div style="color:var(--muted);font-size:13px">${esc(b.account_number||'No acct #')} ${b.category?'· <span class="badge badge-cat">'+esc(b.category)+'</span>':''}</div>
+      </div>
+      <button class="close-btn" onclick="document.getElementById('detail-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="detail-amount">${b.amount_due != null ? '$'+b.amount_due.toFixed(2) : '—'}</div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <span class="badge badge-${b.paid}">${b.paid==='Y'?'✓ Paid':'✗ Unpaid'}</span>
+      ${b.in_collections==='Y'?'<span class="badge badge-col">⚠ Collections</span>':''}
+      ${isOverdue?'<span class="badge badge-n">🔴 Overdue</span>':''}
+    </div>
+    <div class="detail-grid">
+      <div class="detail-field"><div class="dl">Due Date</div><div class="dv">${b.due_date||'—'}</div></div>
+      <div class="detail-field"><div class="dl">Statement Date</div><div class="dv">${b.statement_date||'—'}</div></div>
+    </div>
+    ${b.notes ? `<div class="detail-field" style="margin-bottom:20px"><div class="dl">Notes</div><div class="dv" style="margin-top:4px;font-size:13px;color:var(--text)">${esc(b.notes)}</div></div>` : ''}
+
+    <p class="section-title">Linked Records</p>
+    <div id="links-list-${id}">${linksHtml}</div>
+    <div class="add-link-wrap" style="margin-top:12px">
+      <select id="link-select-${id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px">
+        <option value="">— Link to bill —</option>
+        ${linkOptions}
+      </select>
+      <select id="link-type-${id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px">
+        <option value="related">Related</option>
+        <option value="continuation">Continuation</option>
+        <option value="dispute">Dispute</option>
+        <option value="payment-plan">Payment Plan</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="addLink(${id})">Link</button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:24px">
+      <button class="btn btn-ghost btn-sm" onclick="openEdit(${id})">✏ Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteBill(${id}); document.getElementById('detail-overlay').classList.remove('open')">🗑 Delete</button>
+    </div>
+    ${pdfSection}
+  `;
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+async function addLink(billId) {
+  const sel = document.getElementById(`link-select-${billId}`);
+  const typeEl = document.getElementById(`link-type-${billId}`);
+  if (!sel.value) return toast('Select a bill to link', 'err');
+  try {
+    await api(`/api/bills/${billId}/links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ linked_bill_id: parseInt(sel.value), link_type: typeEl.value })
+    });
+    toast('Bills linked ✓');
+    openDetail(billId);
+  } catch(e) {
+    toast('Already linked or error', 'err');
+  }
+}
+
+async function removeLink(linkId) {
+  await api(`/api/links/${linkId}`, { method: 'DELETE' });
+  toast('Link removed');
+  // refresh by re-finding the open detail
+  const panel = document.getElementById('detail-panel');
+  const addBtn = panel.querySelector('[onclick^="addLink"]');
+  if (addBtn) {
+    const match = addBtn.getAttribute('onclick').match(/addLink\((\d+)\)/);
+    if (match) openDetail(parseInt(match[1]));
+  }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadBills();
+</script>
+</body>
+</html>
