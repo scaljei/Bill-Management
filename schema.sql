@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS bills (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS bill_updates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bill_id INTEGER NOT NULL,
+    note TEXT NOT NULL,
+    author TEXT DEFAULT 'User',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS bill_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     bill_id INTEGER NOT NULL,

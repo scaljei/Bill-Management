@@ -136,7 +136,41 @@ def get_bill(bill_id):
         WHERE bl.bill_id = ?
     """, (bill_id,)).fetchall()
     bill['links'] = [dict(l) for l in links]
+
+    # updates / audit log
+    updates = db.execute("""
+        SELECT id, note, author, created_at
+        FROM bill_updates WHERE bill_id=? ORDER BY created_at DESC
+    """, (bill_id,)).fetchall()
+    bill['updates'] = [dict(u) for u in updates]
     return jsonify(bill)
+
+
+@app.route('/api/bills/<int:bill_id>/updates', methods=['POST'])
+def add_update(bill_id):
+    db = get_db()
+    data = request.get_json()
+    note = (data.get('note') or '').strip()
+    author = (data.get('author') or 'User').strip() or 'User'
+    if not note:
+        return jsonify({'error': 'Note is required'}), 400
+    cur = db.execute(
+        "INSERT INTO bill_updates (bill_id, note, author) VALUES (?,?,?)",
+        (bill_id, note, author)
+    )
+    db.execute("UPDATE bills SET updated_at=datetime('now') WHERE id=?", (bill_id,))
+    db.commit()
+    row = db.execute("SELECT id, note, author, created_at FROM bill_updates WHERE id=?",
+                     (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route('/api/updates/<int:update_id>', methods=['DELETE'])
+def delete_update(update_id):
+    db = get_db()
+    db.execute("DELETE FROM bill_updates WHERE id=?", (update_id,))
+    db.commit()
+    return jsonify({'message': 'Deleted'})
 
 
 @app.route('/api/bills/<int:bill_id>', methods=['PUT'])
