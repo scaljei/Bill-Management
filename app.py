@@ -3,6 +3,7 @@ import os
 from flask import Flask, request, jsonify, send_file, render_template, g
 from datetime import datetime
 import io
+from ocr import extract_bill_fields
 
 app = Flask(__name__)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'bills.db')
@@ -246,6 +247,30 @@ def get_pdf(bill_id):
         download_name=row['pdf_filename'] or f'bill_{bill_id}.pdf',
         as_attachment=False
     )
+
+
+@app.route('/api/bills/<int:bill_id>/scan', methods=['POST'])
+def scan_stored_pdf(bill_id):
+    """Run OCR on a PDF already stored in the DB."""
+    db = get_db()
+    row = db.execute("SELECT pdf_data, pdf_filename FROM bills WHERE id=?", (bill_id,)).fetchone()
+    if not row or not row['pdf_data']:
+        return jsonify({'error': 'No PDF stored for this bill'}), 404
+    fields = extract_bill_fields(bytes(row['pdf_data']), row['pdf_filename'] or '')
+    return jsonify(fields)
+
+
+@app.route('/api/scan', methods=['POST'])
+def scan_uploaded_pdf():
+    """Run OCR on a freshly uploaded PDF (before saving) — used by bulk upload and add form."""
+    if 'pdf' not in request.files:
+        return jsonify({'error': 'No PDF uploaded'}), 400
+    f = request.files['pdf']
+    if not f.filename:
+        return jsonify({'error': 'Empty file'}), 400
+    pdf_bytes = f.read()
+    fields = extract_bill_fields(pdf_bytes, f.filename)
+    return jsonify(fields)
 
 
 # ── Links ─────────────────────────────────────────────────────────────────────
