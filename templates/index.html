@@ -249,6 +249,46 @@
   .toast.ok { border-left: 3px solid var(--success); }
   .toast.err { border-left: 3px solid var(--danger); }
 
+  /* Bulk upload */
+  .bulk-drop-zone {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 40px 20px; text-align: center; position: relative;
+    transition: all 0.2s; cursor: default;
+  }
+  .bulk-drop-zone.drag-over { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+  .bulk-drop-zone input[type=file] { display: none; }
+  .bulk-drop-inner { pointer-events: none; }
+  .bulk-drop-inner button { pointer-events: all; }
+
+  .bulk-file-row {
+    display: grid; grid-template-columns: 180px 1fr 1fr 90px 90px 32px;
+    gap: 8px; align-items: center;
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .bulk-file-row:first-child { border-top: 1px solid var(--border); }
+  .bulk-file-row.done { opacity: 0.5; }
+  .bulk-file-row.error td { color: var(--danger); }
+  .bulk-file-name { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bulk-file-name span { display: block; font-size: 10px; color: var(--muted); }
+  .bulk-status { font-size: 11px; text-align: center; }
+  .bulk-header {
+    display: grid; grid-template-columns: 180px 1fr 1fr 90px 90px 32px;
+    gap: 8px; padding: 6px 12px;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
+    background: var(--surface2); border-radius: 8px 8px 0 0;
+    margin-top: 16px;
+  }
+  .bulk-queue-wrap { border-radius: 0 0 8px 8px; overflow: hidden; max-height: 340px; overflow-y: auto; }
+  .bulk-file-row input, .bulk-file-row select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 6px;
+    font-family: 'DM Mono', monospace; font-size: 12px; outline: none; width: 100%;
+  }
+  .bulk-file-row input:focus, .bulk-file-row select:focus { border-color: var(--accent); }
+  .bulk-remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+  .bulk-remove-btn:hover { color: var(--danger); }
+
   /* Responsive */
   @media (max-width: 900px) {
     .shell { grid-template-columns: 1fr; }
@@ -287,6 +327,7 @@
         <input type="text" id="search-input" placeholder="Search provider, acct…" oninput="debounceLoad()"/>
       </div>
       <button class="btn btn-primary" onclick="openModal()">＋ Add Bill</button>
+      <button class="btn btn-ghost" onclick="openBulkModal()" title="Upload multiple PDFs from a folder">📁 Bulk Upload</button>
     </div>
     <div class="content">
       <div class="filters" id="filter-row"></div>
@@ -362,6 +403,79 @@
         <button type="submit" class="btn btn-primary">Save Bill</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Bulk Upload Modal -->
+<div class="overlay" id="bulk-overlay" onclick="overlayClose(event, 'bulk-overlay')">
+  <div class="modal" style="max-width:820px">
+    <div class="modal-header">
+      <h3>📁 Bulk Upload PDFs</h3>
+      <button class="close-btn" onclick="closeBulkModal()">✕</button>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="bulk-drop-zone" id="bulk-drop-zone">
+      <input type="file" id="bulk-file-input" accept=".pdf" multiple
+        onchange="onBulkFiles(this.files)"/>
+      <input type="file" id="bulk-folder-input" accept=".pdf" multiple webkitdirectory
+        onchange="onBulkFiles(this.files)"/>
+      <div class="bulk-drop-inner">
+        <div style="font-size:36px;margin-bottom:8px">📂</div>
+        <p style="font-size:14px;font-weight:600;margin-bottom:4px">Drop PDFs here or choose</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Supports individual files or an entire folder</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('bulk-file-input').click()">Select Files</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('bulk-folder-input').click()">Select Folder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared defaults -->
+    <div id="bulk-defaults-wrap" style="display:none">
+      <p class="section-title" style="margin-top:20px">Default Values (applied to all files — override per file below)</p>
+      <div class="form-grid" style="margin-bottom:4px">
+        <div class="field">
+          <label>Category</label>
+          <input type="text" id="bulk-default-category" placeholder="e.g. Utilities" list="cat-list"/>
+        </div>
+        <div class="field">
+          <label>Paid</label>
+          <div class="radio-row">
+            <label><input type="radio" name="bulk_paid" value="N" checked/> No</label>
+            <label><input type="radio" name="bulk_paid" value="Y"/> Yes</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>In Collections</label>
+          <div class="radio-row">
+            <label><input type="radio" name="bulk_collections" value="N" checked/> No</label>
+            <label><input type="radio" name="bulk_collections" value="Y"/> Yes</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Due Date</label>
+          <input type="date" id="bulk-default-due"/>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:4px;margin-bottom:16px" onclick="applyDefaults()">↓ Apply to all rows</button>
+    </div>
+
+    <!-- File queue -->
+    <div id="bulk-queue"></div>
+
+    <!-- Actions -->
+    <div id="bulk-actions" style="display:none;margin-top:20px;display:none">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="bulk-import-btn" onclick="runBulkImport()">⬆ Import All</button>
+        <button class="btn btn-ghost" onclick="closeBulkModal()">Cancel</button>
+        <span id="bulk-progress" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <!-- Progress bar -->
+      <div style="margin-top:12px;background:var(--surface2);border-radius:4px;height:6px;overflow:hidden">
+        <div id="bulk-bar" style="height:100%;background:var(--accent);width:0;transition:width 0.3s"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -738,6 +852,181 @@ async function removeLink(linkId, billId) {
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Bulk Upload ───────────────────────────────────────────────────────────────
+
+let bulkFiles = []; // [{file, id, status}]
+let bulkIdCounter = 0;
+
+function openBulkModal() {
+  bulkFiles = [];
+  document.getElementById('bulk-queue').innerHTML = '';
+  document.getElementById('bulk-defaults-wrap').style.display = 'none';
+  document.getElementById('bulk-actions').style.display = 'none';
+  document.getElementById('bulk-bar').style.width = '0';
+  document.getElementById('bulk-progress').textContent = '';
+  document.getElementById('bulk-import-btn').disabled = false;
+  document.getElementById('bulk-overlay').classList.add('open');
+  setupBulkDrop();
+}
+
+function closeBulkModal() {
+  document.getElementById('bulk-overlay').classList.remove('open');
+}
+
+function setupBulkDrop() {
+  const zone = document.getElementById('bulk-drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const files = [...e.dataTransfer.files].filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    if (files.length) onBulkFiles(files);
+  });
+}
+
+function onBulkFiles(fileList) {
+  const newFiles = [...fileList].filter(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!newFiles.length) { toast('No PDF files found', 'err'); return; }
+
+  newFiles.forEach(f => {
+    bulkFiles.push({ file: f, id: ++bulkIdCounter, status: 'pending',
+      provider: f.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' '),
+      category: '', amount: '', due_date: '', statement_date: '', paid: 'N', collections: 'N'
+    });
+  });
+
+  renderBulkQueue();
+  document.getElementById('bulk-defaults-wrap').style.display = 'block';
+  document.getElementById('bulk-actions').style.display = 'block';
+}
+
+function renderBulkQueue() {
+  if (!bulkFiles.length) {
+    document.getElementById('bulk-queue').innerHTML = '';
+    return;
+  }
+  const rows = bulkFiles.map(entry => {
+    const statusIcon = entry.status === 'done' ? '✅' : entry.status === 'error' ? '❌' : entry.status === 'uploading' ? '⏳' : '';
+    return `<div class="bulk-file-row ${entry.status}" id="bulk-row-${entry.id}">
+      <div class="bulk-file-name">
+        📄 ${esc(entry.file.name)}
+        <span>${(entry.file.size / 1024).toFixed(0)} KB ${entry.errorMsg ? '· <span style="color:var(--danger)">'+esc(entry.errorMsg)+'</span>' : ''}</span>
+      </div>
+      <input type="text" placeholder="Provider *" value="${esc(entry.provider)}"
+        oninput="bulkField(${entry.id},'provider',this.value)"/>
+      <input type="text" placeholder="Category" value="${esc(entry.category)}" list="cat-list"
+        oninput="bulkField(${entry.id},'category',this.value)"/>
+      <input type="number" step="0.01" placeholder="Amount" value="${entry.amount}"
+        oninput="bulkField(${entry.id},'amount',this.value)"/>
+      <input type="date" placeholder="Due Date" value="${entry.due_date}"
+        oninput="bulkField(${entry.id},'due_date',this.value)"/>
+      <div class="bulk-status">${statusIcon}
+        <button class="bulk-remove-btn" onclick="removeBulkFile(${entry.id})" title="Remove">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('bulk-queue').innerHTML = `
+    <div class="bulk-header">
+      <div>File</div><div>Provider</div><div>Category</div><div>Amount</div><div>Due Date</div><div></div>
+    </div>
+    <div class="bulk-queue-wrap">${rows}</div>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px">${bulkFiles.length} file${bulkFiles.length!==1?'s':''} queued</p>
+  `;
+}
+
+function bulkField(id, field, value) {
+  const entry = bulkFiles.find(f => f.id === id);
+  if (entry) entry[field] = value;
+}
+
+function removeBulkFile(id) {
+  bulkFiles = bulkFiles.filter(f => f.id !== id);
+  renderBulkQueue();
+  if (!bulkFiles.length) {
+    document.getElementById('bulk-defaults-wrap').style.display = 'none';
+    document.getElementById('bulk-actions').style.display = 'none';
+  }
+}
+
+function applyDefaults() {
+  const cat = document.getElementById('bulk-default-category').value;
+  const paid = document.querySelector('[name=bulk_paid]:checked').value;
+  const col = document.querySelector('[name=bulk_collections]:checked').value;
+  const due = document.getElementById('bulk-default-due').value;
+  bulkFiles.forEach(f => {
+    if (cat) f.category = cat;
+    f.paid = paid;
+    f.collections = col;
+    if (due) f.due_date = due;
+  });
+  renderBulkQueue();
+  toast('Defaults applied to all rows ✓');
+}
+
+async function runBulkImport() {
+  const pending = bulkFiles.filter(f => f.status === 'pending');
+  if (!pending.length) { toast('No files to import', 'err'); return; }
+
+  const missing = pending.filter(f => !f.provider.trim());
+  if (missing.length) { toast(`${missing.length} file(s) missing Provider name`, 'err'); return; }
+
+  document.getElementById('bulk-import-btn').disabled = true;
+  let done = 0;
+
+  for (const entry of pending) {
+    entry.status = 'uploading';
+    updateBulkRowStatus(entry.id, '⏳');
+    try {
+      const fd = new FormData();
+      fd.append('provider', entry.provider.trim());
+      fd.append('category', entry.category);
+      fd.append('amount_due', entry.amount);
+      fd.append('due_date', entry.due_date);
+      fd.append('paid', entry.paid);
+      fd.append('in_collections', entry.collections);
+      fd.append('pdf', entry.file);
+      const r = await fetch('/api/bills', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error(await r.text());
+      entry.status = 'done';
+      updateBulkRowStatus(entry.id, '✅');
+    } catch(e) {
+      entry.status = 'error';
+      entry.errorMsg = e.message;
+      updateBulkRowStatus(entry.id, '❌');
+    }
+    done++;
+    const pct = Math.round(done / pending.length * 100);
+    document.getElementById('bulk-bar').style.width = pct + '%';
+    document.getElementById('bulk-progress').textContent = `${done} / ${pending.length} imported`;
+  }
+
+  const succeeded = pending.filter(f => f.status === 'done').length;
+  const failed = pending.filter(f => f.status === 'error').length;
+  toast(`Imported ${succeeded} bill${succeeded!==1?'s':''}${failed?' · '+failed+' failed':''}`, failed ? 'err' : 'ok');
+  loadBills();
+  if (!failed) setTimeout(closeBulkModal, 1200);
+  else document.getElementById('bulk-import-btn').disabled = false;
+}
+
+function updateBulkRowStatus(id, icon) {
+  const row = document.getElementById(`bulk-row-${id}`);
+  if (!row) return;
+  const statusDiv = row.querySelector('.bulk-status');
+  if (statusDiv) {
+    const btn = statusDiv.querySelector('button');
+    statusDiv.innerHTML = icon;
+    if (btn) statusDiv.appendChild(btn);
+  }
+  const entry = bulkFiles.find(f => f.id === id);
+  if (entry && entry.status === 'done') row.classList.add('done');
+  if (entry && entry.status === 'error') {
+    row.classList.add('error');
+    renderBulkQueue(); // re-render to show error message
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
