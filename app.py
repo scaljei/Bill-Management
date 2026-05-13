@@ -51,7 +51,8 @@ def list_bills():
     query = """
         SELECT id, provider, statement_date, account_number, amount_due,
                due_date, paid, in_collections, category, notes,
-               pdf_filename, pdf_size, created_at, updated_at
+               pdf_filename, pdf_size, created_at, updated_at,
+               (SELECT COUNT(*) FROM bill_links WHERE bill_id = bills.id) as linked_count
         FROM bills WHERE 1=1
     """
     params = []

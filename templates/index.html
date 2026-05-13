@@ -435,9 +435,10 @@ function renderTable(bills) {
     return;
   }
   const today = new Date().toISOString().split('T')[0];
-  const rows = bills.map(b => {
+    const rows = bills.map(b => {
     const isOverdue = b.paid === 'N' && b.due_date && b.due_date < today;
     const amt = b.amount_due != null ? '$' + b.amount_due.toFixed(2) : '—';
+    const linkedCount = b.linked_count > 0 ? `<span style="color:var(--accent);font-size:12px">🔗 ${b.linked_count}</span>` : '—';
     return `<tr class="${isOverdue ? 'overdue-row' : ''}" onclick="openDetail(${b.id})" style="cursor:pointer">
       <td><strong>${esc(b.provider)}</strong><br><span style="color:var(--muted);font-size:11px">${esc(b.account_number||'')}</span></td>
       <td>${b.category ? `<span class="badge badge-cat">${esc(b.category)}</span>` : '—'}</td>
@@ -447,6 +448,7 @@ function renderTable(bills) {
       <td><span class="badge badge-${b.paid}">${b.paid}</span></td>
       <td>${b.in_collections === 'Y' ? '<span class="badge badge-col">YES</span>' : '<span class="badge badge-n">No</span>'}</td>
       <td>${b.pdf_filename ? `<span title="${esc(b.pdf_filename)}" style="color:var(--accent)">📄</span>` : ''}</td>
+      <td>${linkedCount}</td>
       <td onclick="event.stopPropagation()">
         <div class="actions">
           <button class="btn btn-ghost btn-sm" onclick="openEdit(${b.id})">Edit</button>
@@ -460,7 +462,7 @@ function renderTable(bills) {
       <table>
         <thead><tr>
           <th>Provider / Acct</th><th>Category</th><th>Amount</th><th>Due Date</th>
-          <th>Statement Date</th><th>Paid</th><th>Collections</th><th>PDF</th><th>Actions</th>
+          <th>Statement Date</th><th>Paid</th><th>Collections</th><th>PDF</th><th>Linked</th><th>Actions</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -576,7 +578,7 @@ async function openDetail(id) {
             <div class="lp">${esc(l.provider)}</div>
             <div class="lm">${l.link_type} · ${l.due_date || '—'} · ${l.amount_due != null ? '$'+l.amount_due.toFixed(2) : '—'} · ${l.paid==='Y'?'Paid':'Unpaid'}${l.note?' · '+esc(l.note):''}</div>
           </div>
-          <button class="link-del" onclick="event.stopPropagation(); removeLink(${l.link_id})" title="Remove link">✕</button>
+          <button class="link-del" onclick="event.stopPropagation(); removeLink(${l.link_id}, ${id})" title="Remove link">✕</button>
         </div>`).join('')
     : '<p style="color:var(--muted);font-size:13px">No linked records</p>';
 
@@ -592,6 +594,13 @@ async function openDetail(id) {
     <iframe class="pdf-viewer" src="/api/bills/${id}/pdf"></iframe>
   ` : '';
 
+  const statusBadges = `
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <span class="badge badge-${b.paid}">${b.paid==='Y'?'✓ Paid':'✗ Unpaid'}</span>
+      ${b.in_collections==='Y'?'<span class="badge badge-col">⚠ Collections</span>':''}
+      ${isOverdue?'<span class="badge badge-n">🔴 Overdue</span>':''}
+    </div>`;
+
   document.getElementById('detail-panel').innerHTML = `
     <div class="detail-header">
       <div>
@@ -601,21 +610,72 @@ async function openDetail(id) {
       <button class="close-btn" onclick="document.getElementById('detail-overlay').classList.remove('open')">✕</button>
     </div>
     <div class="detail-amount">${b.amount_due != null ? '$'+b.amount_due.toFixed(2) : '—'}</div>
-    <div style="display:flex;gap:8px;margin-bottom:20px">
-      <span class="badge badge-${b.paid}">${b.paid==='Y'?'✓ Paid':'✗ Unpaid'}</span>
-      ${b.in_collections==='Y'?'<span class="badge badge-col">⚠ Collections</span>':''}
-      ${isOverdue?'<span class="badge badge-n">🔴 Overdue</span>':''}
-    </div>
-    <div class="detail-grid">
-      <div class="detail-field"><div class="dl">Due Date</div><div class="dv">${b.due_date||'—'}</div></div>
-      <div class="detail-field"><div class="dl">Statement Date</div><div class="dv">${b.statement_date||'—'}</div></div>
-    </div>
-    ${b.notes ? `<div class="detail-field" style="margin-bottom:20px"><div class="dl">Notes</div><div class="dv" style="margin-top:4px;font-size:13px;color:var(--text)">${esc(b.notes)}</div></div>` : ''}
+    ${statusBadges}
+
+    <!-- Inline edit form -->
+    <p class="section-title">Bill Details</p>
+    <form id="detail-edit-form-${id}" onsubmit="saveDetailForm(event, ${id})" enctype="multipart/form-data">
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="field full">
+          <label>Provider</label>
+          <input type="text" name="provider" value="${esc(b.provider||'')}" required/>
+        </div>
+        <div class="field">
+          <label>Account #</label>
+          <input type="text" name="account_number" value="${esc(b.account_number||'')}"/>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input type="text" name="category" value="${esc(b.category||'')}" list="cat-list"/>
+        </div>
+        <div class="field">
+          <label>Statement Date</label>
+          <input type="date" name="statement_date" value="${b.statement_date||''}"/>
+        </div>
+        <div class="field">
+          <label>Amount Due ($)</label>
+          <input type="number" step="0.01" name="amount_due" value="${b.amount_due!=null?b.amount_due:''}"/>
+        </div>
+        <div class="field">
+          <label>Due Date</label>
+          <input type="date" name="due_date" value="${b.due_date||''}"/>
+        </div>
+        <div class="field">
+          <label>Paid</label>
+          <div class="radio-row">
+            <label><input type="radio" name="paid" value="N" ${b.paid==='N'?'checked':''}/> No</label>
+            <label><input type="radio" name="paid" value="Y" ${b.paid==='Y'?'checked':''}/> Yes</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>In Collections</label>
+          <div class="radio-row">
+            <label><input type="radio" name="in_collections" value="N" ${b.in_collections==='N'?'checked':''}/> No</label>
+            <label><input type="radio" name="in_collections" value="Y" ${b.in_collections==='Y'?'checked':''}/> Yes</label>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Notes</label>
+          <textarea name="notes">${esc(b.notes||'')}</textarea>
+        </div>
+        <div class="field full">
+          <label>Replace PDF</label>
+          <div class="pdf-zone" id="detail-pdf-zone-${id}">
+            <input type="file" name="pdf" accept=".pdf" onchange="onDetailPdfChange(this, ${id})"/>
+            <div>📄 <span id="detail-pdf-text-${id}">${b.pdf_filename ? '📎 '+esc(b.pdf_filename)+' (upload new to replace)' : 'Drop PDF or click to upload'}</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:24px">
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteBill(${id}); document.getElementById('detail-overlay').classList.remove('open')">🗑 Delete</button>
+      </div>
+    </form>
 
     <p class="section-title">Linked Records</p>
     <div id="links-list-${id}">${linksHtml}</div>
-    <div class="add-link-wrap" style="margin-top:12px">
-      <select id="link-select-${id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px">
+    <div class="add-link-wrap" style="margin-top:10px">
+      <select id="link-select-${id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;flex:1">
         <option value="">— Link to bill —</option>
         ${linkOptions}
       </select>
@@ -627,14 +687,30 @@ async function openDetail(id) {
       </select>
       <button class="btn btn-primary btn-sm" onclick="addLink(${id})">Link</button>
     </div>
-
-    <div style="display:flex;gap:8px;margin-top:24px">
-      <button class="btn btn-ghost btn-sm" onclick="openEdit(${id})">✏ Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteBill(${id}); document.getElementById('detail-overlay').classList.remove('open')">🗑 Delete</button>
-    </div>
     ${pdfSection}
   `;
   document.getElementById('detail-overlay').classList.add('open');
+}
+
+async function saveDetailForm(e, id) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    await fetch(`/api/bills/${id}`, { method: 'PUT', body: fd });
+    toast('Changes saved ✓');
+    loadBills();
+    // Refresh the detail panel to reflect updated values
+    openDetail(id);
+  } catch(err) {
+    toast('Save failed: ' + err.message, 'err');
+  }
+}
+
+function onDetailPdfChange(input, id) {
+  if (input.files[0]) {
+    document.getElementById(`detail-pdf-text-${id}`).textContent = '📎 ' + input.files[0].name;
+    document.getElementById(`detail-pdf-zone-${id}`).classList.add('has-file');
+  }
 }
 
 async function addLink(billId) {
@@ -654,16 +730,10 @@ async function addLink(billId) {
   }
 }
 
-async function removeLink(linkId) {
+async function removeLink(linkId, billId) {
   await api(`/api/links/${linkId}`, { method: 'DELETE' });
   toast('Link removed');
-  // refresh by re-finding the open detail
-  const panel = document.getElementById('detail-panel');
-  const addBtn = panel.querySelector('[onclick^="addLink"]');
-  if (addBtn) {
-    const match = addBtn.getAttribute('onclick').match(/addLink\((\d+)\)/);
-    if (match) openDetail(parseInt(match[1]));
-  }
+  openDetail(billId);
 }
 
 function esc(s) {
