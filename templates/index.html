@@ -1118,6 +1118,8 @@ async function scanBulkFile(entry) {
     renderBulkQueue();
   }
 }
+
+async function runBulkImport() {
   const pending = bulkFiles.filter(f => f.status === 'pending');
   if (!pending.length) { toast('No files to import', 'err'); return; }
 
