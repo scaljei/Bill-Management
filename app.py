@@ -261,8 +261,9 @@ def stats():
           COUNT(*) as total,
           SUM(CASE WHEN paid='N' THEN 1 ELSE 0 END) as unpaid,
           SUM(CASE WHEN in_collections='Y' THEN 1 ELSE 0 END) as in_collections,
-          SUM(CASE WHEN paid='N' THEN COALESCE(amount_due,0) ELSE 0 END) as total_owed,
-          SUM(COALESCE(amount_due,0)) as total_amount
+          SUM(CASE WHEN paid='N' AND in_collections='N' THEN COALESCE(amount_due,0) ELSE 0 END) as total_owed,
+          SUM(COALESCE(amount_due,0)) as total_amount,
+          SUM(CASE WHEN in_collections='Y' THEN COALESCE(amount_due,0) ELSE 0 END) as collections_amount
         FROM bills
     """).fetchone()
     overdue = db.execute("""

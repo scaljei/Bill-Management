@@ -476,6 +476,7 @@ async function loadStats() {
       <div class="stat-item"><span class="stat-label">Overdue</span><span class="stat-value danger">${s.overdue}</span></div>
       <div class="stat-item"><span class="stat-label">Collections</span><span class="stat-value danger">${s.in_collections}</span></div>
       <div class="stat-item"><span class="stat-label">Total Owed</span><span class="stat-value danger">$${(s.total_owed||0).toFixed(2)}</span></div>
+      <div class="stat-item"><span class="stat-label">In Collections</span><span class="stat-value warn">$${(s.collections_amount||0).toFixed(2)}</span></div>
     `;
     const catNav = document.getElementById('cat-nav');
     catNav.innerHTML = (s.categories || []).map(c =>
