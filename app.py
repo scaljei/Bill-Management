@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import argparse
 from flask import Flask, request, jsonify, send_file, render_template, g
 from datetime import datetime
 import io
@@ -353,5 +354,19 @@ def categories():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='BillVault — PDF Bill Tracker')
+    parser.add_argument('--skip-dep-check', action='store_true',
+                        help='Skip dependency check on startup')
+    parser.add_argument('--auto-install', action='store_true',
+                        help='Auto-install missing Python packages without prompting')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run on (default: 5000)')
+    parser.add_argument('--host', default='127.0.0.1', help='Host to bind to (default: 127.0.0.1)')
+    args = parser.parse_args()
+
+    if not args.skip_dep_check:
+        from deps import run_checks
+        run_checks(auto=args.auto_install)
+
     init_db()
-    app.run(debug=True, port=5000)
+    print(f"  Starting BillVault on http://{args.host}:{args.port}\n")
+    app.run(debug=True, port=args.port, host=args.host)
