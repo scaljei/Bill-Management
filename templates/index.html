@@ -231,8 +231,8 @@
   .link-del { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; }
   .link-del:hover { color: var(--danger); }
 
-  .add-link-wrap { display: flex; gap: 8px; margin-top: 10px; }
-  .add-link-wrap select { flex: 1; }
+  .add-link-wrap { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .add-link-wrap select { width: 100%; }
 
   /* PDF viewer */
   .pdf-viewer { width: 100%; height: 400px; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; }
@@ -788,8 +788,8 @@ async function openDetail(id) {
 
     <p class="section-title">Linked Records</p>
     <div id="links-list-${id}">${linksHtml}</div>
-    <div class="add-link-wrap" style="margin-top:10px">
-      <select id="link-select-${id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;flex:1">
+    <div class="add-link-wrap" style="margin-top:10px;flex-direction:column;align-items:stretch">
+      <select id="link-select-${id}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px">
         <option value="">— Link to bill —</option>
         ${linkOptions}
       </select>
@@ -799,7 +799,7 @@ async function openDetail(id) {
         <option value="dispute">Dispute</option>
         <option value="payment-plan">Payment Plan</option>
       </select>
-      <button class="btn btn-primary btn-sm" onclick="addLink(${id})">Link</button>
+      <button class="btn btn-primary btn-sm" style="align-self:flex-start" onclick="addLink(${id})">Link</button>
     </div>
     ${pdfSection}
   `;
