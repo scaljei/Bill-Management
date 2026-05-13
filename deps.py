@@ -5,6 +5,7 @@ prints a clear report and prompts to auto-install missing Python packages.
 """
 
 import sys
+import os
 import subprocess
 import shutil
 import importlib.metadata
@@ -104,6 +105,95 @@ def check_system_binary(dep: dict):
         return True, ver
     except Exception:
         return True, "unknown"
+
+
+# ── Git version check ────────────────────────────────────────────────────────
+
+def check_git_version() -> dict:
+    """
+    Check local vs remote git state.
+    Returns dict with keys:
+      git_available, in_repo, local_sha, remote_sha,
+      commits_behind, commits_ahead, branch, remote_url,
+      status (ok | behind | ahead | diverged | no_remote | no_git | error),
+      error_msg
+    """
+    result = {
+        "git_available": False, "in_repo": False,
+        "local_sha": None, "remote_sha": None,
+        "commits_behind": 0, "commits_ahead": 0,
+        "branch": None, "remote_url": None,
+        "status": "no_git", "error_msg": None,
+    }
+
+    if not shutil.which("git"):
+        return result
+    result["git_available"] = True
+
+    def _git(*args, cwd=None):
+        r = subprocess.run(
+            ["git"] + list(args),
+            capture_output=True, text=True, timeout=10,
+            cwd=cwd or os.path.dirname(os.path.abspath(__file__))
+        )
+        return r.stdout.strip(), r.stderr.strip(), r.returncode
+
+    # Are we inside a repo?
+    _, _, rc = _git("rev-parse", "--git-dir")
+    if rc != 0:
+        result["status"] = "no_git"
+        return result
+    result["in_repo"] = True
+
+    # Current branch
+    branch, _, _ = _git("rev-parse", "--abbrev-ref", "HEAD")
+    result["branch"] = branch or "HEAD"
+
+    # Local SHA
+    local_sha, _, _ = _git("rev-parse", "HEAD")
+    result["local_sha"] = local_sha[:7] if local_sha else None
+
+    # Remote URL
+    remote_url, _, rc = _git("remote", "get-url", "origin")
+    if rc != 0:
+        result["status"] = "no_remote"
+        result["error_msg"] = "No remote 'origin' configured"
+        return result
+    result["remote_url"] = remote_url
+
+    # Fetch quietly (timeout generous for slow connections)
+    _, fetch_err, fetch_rc = _git("fetch", "origin", "--quiet")
+    if fetch_rc != 0:
+        result["status"] = "error"
+        result["error_msg"] = f"fetch failed: {fetch_err[:120]}"
+        return result
+
+    # Remote SHA
+    remote_sha, _, _ = _git("rev-parse", f"origin/{branch}")
+    result["remote_sha"] = remote_sha[:7] if remote_sha else None
+
+    # Counts
+    behind_str, _, _ = _git("rev-list", "--count", f"HEAD..origin/{branch}")
+    ahead_str,  _, _ = _git("rev-list", "--count", f"origin/{branch}..HEAD")
+    try:
+        result["commits_behind"] = int(behind_str)
+        result["commits_ahead"]  = int(ahead_str)
+    except ValueError:
+        pass
+
+    behind = result["commits_behind"]
+    ahead  = result["commits_ahead"]
+
+    if behind == 0 and ahead == 0:
+        result["status"] = "ok"
+    elif behind > 0 and ahead == 0:
+        result["status"] = "behind"
+    elif ahead > 0 and behind == 0:
+        result["status"] = "ahead"
+    else:
+        result["status"] = "diverged"
+
+    return result
 
 
 # ── Auto-install ──────────────────────────────────────────────────────────────
@@ -212,6 +302,50 @@ def run_checks(auto: bool = False, quiet: bool = False) -> bool:
             print(f"\n    {YEL}{dep['name']}{RESET}")
             for line in dep["install"][plat].splitlines():
                 print(f"      {line}")
+
+    # ── Git version check
+    print(f"\n  {BOLD}Git version{RESET}")
+    gv = check_git_version()
+    if not gv["git_available"]:
+        print(f"    {WARN} git not found — skipping update check")
+    elif not gv["in_repo"]:
+        print(f"    {WARN} Not inside a git repository")
+    elif gv["status"] == "no_remote":
+        print(f"    {WARN} No remote origin configured")
+    elif gv["status"] == "error":
+        print(f"    {WARN} Could not reach remote  {DIM}({gv['error_msg']}){RESET}")
+    elif gv["status"] == "ok":
+        if not quiet:
+            print(f"    {OK} Up to date  {DIM}({gv['branch']} @ {gv['local_sha']}){RESET}")
+    elif gv["status"] == "behind":
+        n = gv["commits_behind"]
+        print(f"    {WARN} {YEL}{n} commit{'s' if n!=1 else ''} behind origin/{gv['branch']}{RESET}  "
+              f"{DIM}(local {gv['local_sha']} → remote {gv['remote_sha']}){RESET}")
+        print(f"\n    {BOLD}Run to update:{RESET}")
+        print(f"      {CYN}git pull{RESET}")
+        print()
+        try:
+            choice = input(f"  Pull now? [Y/n]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            choice = 'n'
+        if choice in ('', 'y'):
+            print()
+            pull_result = subprocess.run(["git", "pull"], cwd=os.path.dirname(os.path.abspath(__file__)))
+            if pull_result.returncode == 0:
+                print(f"\n  {GRN}Pull successful. Restart the app to apply updates.{RESET}")
+                sys.exit(0)
+            else:
+                print(f"\n  {RED}Pull failed. Please run 'git pull' manually.{RESET}")
+        else:
+            print(f"  {YEL}Skipping update.{RESET}")
+    elif gv["status"] == "ahead":
+        n = gv["commits_ahead"]
+        if not quiet:
+            print(f"    {CYN}{n} local commit{'s' if n!=1 else ''} ahead of origin{RESET}  "
+                  f"{DIM}({gv['branch']} @ {gv['local_sha']}){RESET}")
+    elif gv["status"] == "diverged":
+        print(f"    {WARN} Branch has diverged from origin/{gv['branch']}  "
+              f"{DIM}({gv['commits_behind']} behind, {gv['commits_ahead']} ahead){RESET}")
 
     # ── Summary
     print()
