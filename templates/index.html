@@ -339,12 +339,167 @@
   .bulk-remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
   .bulk-remove-btn:hover { color: var(--danger); }
 
-  /* Responsive */
+  /* ── Mobile / Responsive ─────────────────────────────── */
   @media (max-width: 900px) {
     .shell { grid-template-columns: 1fr; }
     .sidebar { display: none; }
     .detail-panel { width: 100%; }
   }
+
+  /* ── Mobile-specific (JS adds .is-mobile to body) ─────── */
+  body.is-mobile {
+    padding-bottom: 70px; /* room for bottom nav */
+  }
+  body.is-mobile .shell { grid-template-columns: 1fr; }
+  body.is-mobile .sidebar { display: none; }
+
+  /* Mobile topbar */
+  body.is-mobile .topbar {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  body.is-mobile .topbar h2 { font-size: 16px; }
+  body.is-mobile .search-wrap input { width: 150px; font-size: 12px; }
+  body.is-mobile .btn-primary { padding: 8px 12px; font-size: 12px; }
+
+  /* Mobile content */
+  body.is-mobile .content { padding: 14px 16px; }
+  body.is-mobile .filters { gap: 6px; }
+  body.is-mobile .filter-btn { font-size: 11px; padding: 4px 10px; }
+
+  /* Hide table on mobile, show card list */
+  body.is-mobile .bills-table-wrap { display: none; }
+  body.is-mobile .bills-card-list { display: flex; flex-direction: column; gap: 10px; }
+  .bills-card-list { display: none; } /* hidden on desktop */
+
+  /* Bill card (mobile) */
+  .bill-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bill-card:active { background: var(--surface2); }
+  .bill-card.overdue { border-left: 3px solid var(--danger); }
+  .bill-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .bill-card-provider { font-size: 15px; font-weight: 600; }
+  .bill-card-amount { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .bill-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .bill-card-actions { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .bill-card-actions .btn { flex: 1; justify-content: center; font-size: 12px; padding: 7px; }
+
+  /* Bottom nav */
+  .bottom-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 50;
+    justify-content: space-around;
+  }
+  body.is-mobile .bottom-nav { display: flex; }
+  .bnav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; padding: 4px 16px; border-radius: 8px;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    -webkit-tap-highlight-color: transparent; transition: color 0.15s;
+  }
+  .bnav-btn .bnav-icon { font-size: 20px; }
+  .bnav-btn.active { color: var(--accent); }
+
+  /* Mobile modal — full screen slide-up */
+  body.is-mobile .overlay { align-items: flex-end; padding: 0; }
+  body.is-mobile .modal {
+    max-width: 100%; width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    padding: 20px 20px 32px;
+  }
+  body.is-mobile .overlay.open .modal { transform: translateY(0); }
+  body.is-mobile .overlay .modal { transform: translateY(100%); }
+
+  /* Mobile form — single column */
+  body.is-mobile .form-grid { grid-template-columns: 1fr; }
+  body.is-mobile .form-grid .full { grid-column: 1; }
+
+  /* Mobile detail panel — full screen */
+  body.is-mobile .detail-overlay { align-items: flex-end; }
+  body.is-mobile .detail-panel {
+    width: 100%; height: 92vh;
+    border-radius: 20px 20px 0 0;
+    border-left: none; border-top: 1px solid var(--border);
+    transform: translateY(100%);
+    padding: 20px 16px 32px;
+  }
+  body.is-mobile .detail-overlay.open .detail-panel { transform: translateY(0); }
+
+  /* Mobile bulk modal */
+  body.is-mobile #bulk-overlay { align-items: flex-end; padding: 0; }
+  body.is-mobile #bulk-overlay .modal {
+    border-radius: 20px 20px 0 0; max-height: 95vh;
+    padding: 20px 16px 32px;
+  }
+  body.is-mobile .bulk-header { display: none; }
+  body.is-mobile .bulk-file-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 6px; padding: 12px;
+  }
+  body.is-mobile .bulk-file-name { grid-column: 1 / -1; }
+  body.is-mobile .bulk-status { grid-column: 1 / -1; text-align: left; }
+
+  /* Touch-friendly tap targets */
+  body.is-mobile .btn { min-height: 40px; }
+  body.is-mobile .nav-btn { min-height: 44px; }
+  body.is-mobile th, body.is-mobile td { padding: 10px 12px; }
+
+  /* Stats cards on mobile */
+  body.is-mobile .mobile-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px; margin-bottom: 14px;
+  }
+  .mobile-stats-bar { display: none; }
+  body.is-mobile .mobile-stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 10px 12px;
+  }
+  .mobile-stat-card .msl { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .mobile-stat-card .msv { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .mobile-stat-card .msv.danger { color: var(--danger); }
+  .mobile-stat-card .msv.warn { color: var(--warn); }
+  .mobile-stat-card .msv.success { color: var(--success); }
+
+  /* Mobile filter drawer */
+  .filter-drawer {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .filter-drawer.open { opacity: 1; pointer-events: all; }
+  .filter-drawer-panel {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    transform: translateY(100%); transition: transform 0.25s;
+  }
+  .filter-drawer.open .filter-drawer-panel { transform: translateY(0); }
+  .filter-drawer-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .filter-option {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 0; border-bottom: 1px solid var(--border);
+    cursor: pointer; font-size: 14px; -webkit-tap-highlight-color: transparent;
+  }
+  .filter-option:last-child { border: none; }
+  .filter-option .fo-icon { font-size: 20px; width: 28px; text-align: center; }
+  .filter-option.active { color: var(--accent); }
+  body.is-mobile .hide-mobile { display: none; }
 </style>
 </head>
 <body>
@@ -376,12 +531,16 @@
         <span class="s-icon">🔍</span>
         <input type="text" id="search-input" placeholder="Search provider, acct…" oninput="debounceLoad()"/>
       </div>
-      <button class="btn btn-primary" onclick="openModal()">＋ Add Bill</button>
-      <button class="btn btn-ghost" onclick="openBulkModal()" title="Upload multiple PDFs from a folder">📁 Bulk Upload</button>
+      <button class="btn btn-primary" onclick="openModal()">＋ <span class="hide-mobile">Add Bill</span></button>
+      <button class="btn btn-ghost" onclick="openBulkModal()" title="Upload multiple PDFs from a folder">📁 <span class="hide-mobile">Bulk Upload</span></button>
     </div>
     <div class="content">
+      <!-- Mobile stats bar (only visible on mobile) -->
+      <div class="mobile-stats-bar" id="mobile-stats-bar"></div>
       <div class="filters" id="filter-row"></div>
       <div id="bills-container"></div>
+      <!-- Mobile card list (only visible on mobile) -->
+      <div class="bills-card-list" id="bills-card-list"></div>
     </div>
   </div>
 </div>
@@ -536,6 +695,38 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Mobile bottom nav -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bnav-btn active" id="bnav-all" onclick="mobileNav('all',this)">
+    <span class="bnav-icon">📋</span>All
+  </button>
+  <button class="bnav-btn" id="bnav-unpaid" onclick="mobileNav('unpaid',this)">
+    <span class="bnav-icon">⏳</span>Unpaid
+  </button>
+  <button class="bnav-btn" id="bnav-add" onclick="openModal()">
+    <span class="bnav-icon" style="font-size:26px;line-height:1">＋</span>Add
+  </button>
+  <button class="bnav-btn" id="bnav-filter" onclick="openFilterDrawer()">
+    <span class="bnav-icon">🔍</span>Filter
+  </button>
+  <button class="bnav-btn" id="bnav-collections" onclick="mobileNav('collections',this)">
+    <span class="bnav-icon">⚠️</span>Alerts
+  </button>
+</nav>
+
+<!-- Mobile filter drawer -->
+<div class="filter-drawer" id="filter-drawer" onclick="closeFilterDrawer(event)">
+  <div class="filter-drawer-panel">
+    <div class="filter-drawer-title">View</div>
+    <div class="filter-option active" onclick="mobileNavDrawer('all')"><span class="fo-icon">📋</span> All Bills</div>
+    <div class="filter-option" onclick="mobileNavDrawer('unpaid')"><span class="fo-icon">⏳</span> Unpaid</div>
+    <div class="filter-option" onclick="mobileNavDrawer('overdue')"><span class="fo-icon">🔴</span> Overdue</div>
+    <div class="filter-option" onclick="mobileNavDrawer('paid')"><span class="fo-icon">✅</span> Paid</div>
+    <div class="filter-option" onclick="mobileNavDrawer('collections')"><span class="fo-icon">⚠️</span> Collections</div>
+    <div id="drawer-cat-options"></div>
+  </div>
+</div>
 
 <script>
 let currentView = 'all';
@@ -1262,6 +1453,136 @@ async function deleteUpdate(updateId, billId) {
     feed.innerHTML = '<p class="audit-empty">No activity recorded yet.</p>';
   }
   toast('Entry deleted');
+}
+
+// ── Mobile detection & init ───────────────────────────────────────────────────
+
+const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 1 && window.innerWidth < 768);
+
+if (isMobile) {
+  document.body.classList.add('is-mobile');
+}
+
+// Override loadBills to also render card list on mobile
+const _origLoadBills = loadBills;
+async function loadBillsWithMobile() {
+  const search = document.getElementById('search-input').value;
+  let url = '/api/bills?';
+  if (search) url += `search=${encodeURIComponent(search)}&`;
+  if (currentView === 'unpaid') url += 'paid=N&';
+  if (currentView === 'paid') url += 'paid=Y&';
+  if (currentView === 'collections') url += 'collections=Y&';
+  if (currentView !== 'all' && currentView !== 'unpaid' && currentView !== 'paid'
+      && currentView !== 'overdue' && currentView !== 'collections') {
+    url += `category=${encodeURIComponent(currentView)}&`;
+  }
+  const bills = await api(url);
+  const today = new Date().toISOString().split('T')[0];
+  currentBills = currentView === 'overdue'
+    ? bills.filter(b => b.paid === 'N' && b.due_date && b.due_date < today)
+    : bills;
+  renderTable(currentBills);
+  if (isMobile) renderCardList(currentBills);
+  loadStats();
+}
+loadBills = loadBillsWithMobile;
+
+function renderCardList(bills) {
+  const container = document.getElementById('bills-card-list');
+  if (!bills.length) {
+    container.innerHTML = `<div class="empty"><div class="e-icon">🗂️</div><p>No bills found</p></div>`;
+    return;
+  }
+  const today = new Date().toISOString().split('T')[0];
+  container.innerHTML = bills.map(b => {
+    const isOverdue = b.paid === 'N' && b.due_date && b.due_date < today;
+    const amt = b.amount_due != null ? '$' + b.amount_due.toFixed(2) : '—';
+    const badges = [
+      b.category ? `<span class="badge badge-cat">${esc(b.category)}</span>` : '',
+      `<span class="badge badge-${b.paid}">${b.paid === 'Y' ? '✓ Paid' : '✗ Unpaid'}</span>`,
+      b.in_collections === 'Y' ? '<span class="badge badge-col">⚠ Collections</span>' : '',
+      isOverdue ? '<span class="badge badge-n">🔴 Overdue</span>' : '',
+      b.pdf_filename ? '<span style="color:var(--accent)">📄</span>' : '',
+      b.linked_count > 0 ? `<span style="color:var(--accent);font-size:12px">🔗${b.linked_count}</span>` : '',
+    ].filter(Boolean).join('');
+    return `<div class="bill-card ${isOverdue ? 'overdue' : ''}" onclick="openDetail(${b.id})">
+      <div class="bill-card-header">
+        <div>
+          <div class="bill-card-provider">${esc(b.provider)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(b.account_number || '')}</div>
+        </div>
+        <div class="bill-card-amount">${amt}</div>
+      </div>
+      <div class="bill-card-meta">
+        ${badges}
+        ${b.due_date ? `<span>Due ${b.due_date}</span>` : ''}
+      </div>
+      <div class="bill-card-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="openEdit(${b.id})">✏ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBill(${b.id})">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Mobile stats bar
+async function loadMobileStats() {
+  if (!isMobile) return;
+  try {
+    const s = await api('/api/stats');
+    document.getElementById('mobile-stats-bar').innerHTML = `
+      <div class="mobile-stat-card"><div class="msl">Total Owed</div><div class="msv danger">$${(s.total_owed||0).toFixed(2)}</div></div>
+      <div class="mobile-stat-card"><div class="msl">Overdue</div><div class="msv danger">${s.overdue}</div></div>
+      <div class="mobile-stat-card"><div class="msl">Unpaid</div><div class="msv warn">${s.unpaid}</div></div>
+      <div class="mobile-stat-card"><div class="msl">Collections</div><div class="msv warn">$${(s.collections_amount||0).toFixed(2)}</div></div>
+    `;
+    // populate drawer categories
+    const cats = (s.categories || []).map(c =>
+      `<div class="filter-option" onclick="mobileNavDrawer(${JSON.stringify(c.category)})">
+        <span class="fo-icon">🏷</span> ${esc(c.category)} <span style="margin-left:auto;color:var(--muted);font-size:12px">${c.cnt}</span>
+      </div>`).join('');
+    const dc = document.getElementById('drawer-cat-options');
+    if (dc && cats) dc.innerHTML = `<div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:14px 0 6px">Categories</div>${cats}`;
+  } catch(e) {}
+}
+
+// Override loadStats to also call mobile stats
+const _origLoadStats = loadStats;
+async function loadStats() {
+  await _origLoadStats();
+  if (isMobile) await loadMobileStats();
+}
+
+// ── Mobile nav ────────────────────────────────────────────────────────────────
+
+function mobileNav(view, btn) {
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  setView(view);
+}
+
+function openFilterDrawer() {
+  document.getElementById('filter-drawer').classList.add('open');
+}
+
+function closeFilterDrawer(e) {
+  if (e.target.id === 'filter-drawer') {
+    document.getElementById('filter-drawer').classList.remove('open');
+  }
+}
+
+function mobileNavDrawer(view) {
+  document.getElementById('filter-drawer').classList.remove('open');
+  // Update bottom nav active state
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  const map = { all: 'bnav-all', unpaid: 'bnav-unpaid', collections: 'bnav-collections' };
+  if (map[view]) document.getElementById(map[view])?.classList.add('active');
+  setView(view);
+  // Update drawer active option
+  document.querySelectorAll('.filter-option').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim().toLowerCase().startsWith(view));
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
